@@ -1,3 +1,4 @@
+# vim: ft=Dockerfile sw=4 ts=4 expandtab
 ###############################################################################
 #
 # Multi-stage Python 3.x build
@@ -43,11 +44,11 @@ COPY ./init-functions /lib/lsb/
 
 RUN set -ex \
     && apt-mark unhold apt gnupg libcap2 libsemanage1 passwd  libbz2-1.0\
-	&& runDeps='curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd git' \
+        && runDeps='curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd git' \
     && apt-get -qq update; apt-get install -y $runDeps \
-	&& find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
-	&& apt-get remove binutils --purge -y -qq \
-	&& find /var/lib/apt/lists \
+        && find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
+        && apt-get remove binutils --purge -y -qq \
+        && find /var/lib/apt/lists \
             /usr/share/man \
             /usr/share/doc \
             /var/log \
@@ -66,17 +67,17 @@ ADD gnupg/pubring.gpg gnupg/trustdb.gpg /root/.gnupg/
 RUN set -ex \
     && mkdir -p /root/.gnupg \
     && chmod 700 /root/.gnupg \
-	&& buildDeps='libsqlite3-dev zlib1g-dev libexpat1-dev libssl-dev xz-utils dpkg-dev binutils libbz2-dev libreadline-dev' \
-	&& apt-get -qq update; apt-get -qq -y install ${buildDeps}
+        && buildDeps='libsqlite3-dev zlib1g-dev libexpat1-dev libssl-dev xz-utils dpkg-dev binutils libbz2-dev libreadline-dev' \
+        && apt-get -qq update; apt-get -qq -y install ${buildDeps}
 
 ARG PYTHON_VERSION
 
 RUN    curl -L -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
     && curl -L -o /python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
-	&& gpg --keyserver ha.pool.sks-keyservers.net --refresh-keys 2>&1 | egrep -v 'requesting key|not changed' \
-	&& gpg --batch --verify /python.tar.xz.asc /python.tar.xz \
-	&& mkdir -p /usr/src/python \
-	&& tar -xJC /usr/src/python --strip-components=1 -f /python.tar.xz
+        && gpg --keyserver ha.pool.sks-keyservers.net --refresh-keys 2>&1 | egrep -v 'requesting key|not changed' \
+        && gpg --batch --verify /python.tar.xz.asc /python.tar.xz \
+        && mkdir -p /usr/src/python \
+        && tar -xJC /usr/src/python --strip-components=1 -f /python.tar.xz
 
 
 LABEL stage BUILD-SETUP
@@ -90,30 +91,30 @@ ARG PYTHON_VERSION
 ENV LANG C.UTF-8
 
 RUN set -ex \
-	&& cd /usr/src/python \
-	&& gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
+        && cd /usr/src/python \
+        && gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
     && [ $(( ` echo $PYTHON_VERSION | cut -d"." -f1 ` )) -lt 3 ] && BUILD_ARGS="" \
-	; ./configure \
-		--build="$gnuArch" \
-		--enable-loadable-sqlite-extensions \
-		--enable-shared \
-		--with-system-expat \
-		--with-system-ffi \
-		--without-ensurepip ${BUILD_ARGS} \
-	&& make -j $(( 1 * $( egrep '^processor[[:space:]]+:' /proc/cpuinfo | wc -l ) )) \
-	&& make install
+        ; ./configure \
+                --build="$gnuArch" \
+                --enable-loadable-sqlite-extensions \
+                --enable-shared \
+                --with-system-expat \
+                --with-system-ffi \
+                --without-ensurepip ${BUILD_ARGS} \
+        && make -j $(( 1 * $( egrep '^processor[[:space:]]+:' /proc/cpuinfo | wc -l ) )) \
+        && make install
 
 RUN set -ex \
-	    find /usr/local -type f -name "*.so" -exec strip --strip-unneeded {} + \
+        find /usr/local -type f -name "*.so" -exec strip --strip-unneeded {} + \
     &   ldconfig \
     &   find /usr/local -depth \
-		\( \
-			\( -type d -a \( -name test -o -name tests -o -name __pycache__ \) \) \
-			-o \
-			\( -type f -a \( -name '*.pyc' -o -name '*.pyo' \) \) \
-			-o \
-			\( -name "idle*" \) \
-		\) -exec rm -rf '{}' +  \
+                \( \
+                        \( -type d -a \( -name test -o -name tests -o -name __pycache__ \) \) \
+                        -o \
+                        \( -type f -a \( -name '*.pyc' -o -name '*.pyo' \) \) \
+                        -o \
+                        \( -name "idle*" \) \
+                \) -exec rm -rf '{}' +  \
     &&  find /var/lib/apt/lists \
              /usr/share/man \
              /usr/share/doc \
@@ -132,27 +133,26 @@ FROM builder as post-build
 # if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
 ENV PYTHON_PIP_VERSION 9.0.1
 
-
 COPY ./ipython_config.py /
 
 RUN set -ex; ldconfig
 RUN set -ex; curl -sL -o get-pip.py 'https://bootstrap.pypa.io/get-pip.py'; 
 RUN set -ex; python get-pip.py \
-		--disable-pip-version-check \
-		--no-cache-dir \
-		"pip==$PYTHON_PIP_VERSION"; pip --version
+                --disable-pip-version-check \
+                --no-cache-dir \
+                "pip==$PYTHON_PIP_VERSION"; pip --version
 
 RUN mkdir -p $HOME/.ipython/profile_default ;
 RUN mv ipython_config.py $HOME/.ipython/profile_default/. ;
 RUN pip install 'ipython<6' ipdb
 
 RUN set -ex;  \
-	find /usr/local -depth \
-		\( \
-			\( -type d -a \( -name test -o -name tests -o -name __pycache__ \) \) \
-			-o \
-			\( -type f -a \( -name '*.pyc' -o -name '*.pyo' -o -name '*.exe' \) \) \
-		\) -exec rm -rf '{}' +; 
+    find /usr/local -depth \
+        \( \
+            \( -type d -a \( -name test -o -name tests -o -name __pycache__ \) \) \
+                -o \
+                    \( -type f -a \( -name '*.pyc' -o -name '*.pyo' -o -name '*.exe' \) \) \
+        \) -exec rm -rf '{}' +;
 
 RUN rm -rf /root/.cache
 
@@ -165,6 +165,7 @@ FROM runtime
 
 COPY --from=post-build /usr/local /usr/local
 COPY --from=post-build /root /root
+
 RUN /sbin/ldconfig
 
 LABEL stage FINAL
