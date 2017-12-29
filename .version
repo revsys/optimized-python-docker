@@ -1,0 +1,8 @@
+# vim: ft=sh
+
+
+export IMAGE_VERSION=${PYTHON_VERSION}-wee
+export IMAGE=revolutionsystems/python
+
+export MAJOR_VERSION="$( echo ${PYTHON_VERSION} | cut -d"." -f1 )"
+

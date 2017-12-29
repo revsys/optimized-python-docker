@@ -1,8 +1,6 @@
 
 # RevSys Python Builds
 
-*NOTE*: This README isn't 100% accurate and up to date, we will fix it in the near future. Busy at a conference this weekend. The benchmark and Dockerfile information however are correct.
-
 ## What’s wrong with stock Python images? 
 
 The main image variety is too big when the user is operating in a context

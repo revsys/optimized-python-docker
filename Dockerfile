@@ -43,7 +43,7 @@ COPY ./init-functions /lib/lsb/
 
 RUN set -ex \
     && apt-mark unhold apt gnupg libcap2 libsemanage1 passwd  libbz2-1.0\
-	&& runDeps='curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd' \
+	&& runDeps='curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd git' \
     && apt-get -qq update; apt-get install -y $runDeps \
 	&& find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
 	&& apt-get remove binutils --purge -y -qq \
@@ -153,6 +153,8 @@ RUN set -ex;  \
 			-o \
 			\( -type f -a \( -name '*.pyc' -o -name '*.pyo' -o -name '*.exe' \) \) \
 		\) -exec rm -rf '{}' +; 
+
+RUN rm -rf /root/.cache
 
 ARG PYTHON_VERSION
 LABEL stage POST-BUILD
