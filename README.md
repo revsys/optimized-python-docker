@@ -112,3 +112,21 @@ into each build container if they are configured with the `--build-args` flag.
 
 The transparency is significant in that whether or not your build is leveraging
 a proxy will not affect the validity of the build host’s cache.
+
+
+## Origin Notes
+
+Based in large part on the contents of [the Docker Library Python repository](https://github.com/docker-library/python).
+
+---
+
+ 1. uses [GNU make](https://www.gnu.org/software/make/) and environment variables to set options
+    1. `LTO`: if present and not empty, activate link-time-optimization functionality
+    1. `OPTIMAL`: if present and not empty, activate profiler-guided-optimization functionality
+    1. `PYTHON_VERSION’: e.g.: 3.6.3, 3.5.1
+ 1. Does not include [TCL/TK](https://www.tcl.tk/about/uses.html). This is on purpose. If you neeed IDLE or
+    pexpect you’ll need to customize the Dockerfile and rebuild.
+ 1. Uses multi-layer Dockerfile syntax
+
+---
+
