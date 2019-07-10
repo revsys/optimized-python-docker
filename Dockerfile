@@ -31,7 +31,7 @@
 #
 ###############################################################################
 
-FROM gcr.io/google-containers/debian-base-amd64:0.4.0 as runtime
+FROM gcr.io/google-containers/debian-base-amd64:v1.0.0 as runtime
 
 ENV PATH /usr/local/bin:$PATH
 
@@ -44,9 +44,9 @@ COPY ./init-functions /lib/lsb/
 
 RUN set -ex \
     && apt update \
-    && apt-mark unhold apt gnupg libcap2 libsemanage1 passwd  libbz2-1.0 \
-    && runDeps='curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd git' \
-    && apt-get -qq update; apt-get install -y $runDeps \
+    && apt -y upgrade \
+    && apt-mark unhold apt libcap2 libsemanage1 passwd  \
+    && apt-get install -y curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd git \
     && find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
     && apt-get remove binutils --purge -y -qq \
     && find /var/lib/apt/lists \
@@ -73,7 +73,9 @@ RUN set -ex \
 
 ARG PYTHON_VERSION
 
-RUN    curl -L -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
+RUN \
+    set -ex; \
+    curl -L -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
     && curl -L -o /python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
     && gpg --keyserver ha.pool.sks-keyservers.net --refresh-keys 2>&1 | egrep -v 'requesting key|not changed' \
     && gpg --batch --verify /python.tar.xz.asc /python.tar.xz \
@@ -136,7 +138,7 @@ LABEL version ${PYTHON_VERSION}
 FROM builder as post-build
 
 # if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-ENV PYTHON_PIP_VERSION 18.1
+ENV PYTHON_PIP_VERSION 19.1.1
 
 
 COPY ./ipython_config.py /
@@ -153,7 +155,7 @@ RUN set -ex; pip install pipenv --upgrade
 
 RUN mkdir -p $HOME/.ipython/profile_default ;
 RUN mv ipython_config.py $HOME/.ipython/profile_default/. ;
-RUN pip install 'ipython<6' ipdb
+RUN pip install ipython ipdb
 
 RUN set -ex;  \
     find /usr/local -depth \
@@ -172,7 +174,7 @@ LABEL stage POST-BUILD
 LABEL version ${PYTHON_VERSION}
 
 ###############################################################################
-FROM runtime
+FROM runtime as final
 
 COPY --from=post-build /usr/local /usr/local
 COPY --from=post-build /root /root
