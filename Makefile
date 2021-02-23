@@ -3,13 +3,12 @@
 include .version
 
 PYTHON_VERSION ?= 3.6.2
-FUCKOFF = ${MAJOR_VERSION}
 
 TAG = ${PYTHON_VERSION}-wee
 
-IMAGE_TAG = ${IMAGE}:${TAG}
+IMAGE_TAG = ${IMAGE}:${TAG}${TAG_SUFFIX}
 
-BUILD_ARGS = 
+BUILD_ARGS =
 
 
 ifdef PKG_PROXY
@@ -35,10 +34,15 @@ ifdef LTO
 	TAG := ${TAG}-lto
 endif
 
+ifndef DOCKERFILE
+	DOCKERFILE := ./Dockerfile
+endif
+
+TAG_SUFFIX ?=
 
 build-image:
 	@echo building ${IMAGE_TAG}
-	@docker build ${PROXY_ARGS} --build-arg=PYTHON_VERSION=${PYTHON_VERSION} --build-arg=BUILD_ARGS="${BUILD_ARGS}" -t ${IMAGE_TAG} --compress .
+	@docker build ${PROXY_ARGS} -f ${DOCKERFILE} --build-arg=PYTHON_VERSION=${PYTHON_VERSION} --build-arg=BUILD_ARGS="${BUILD_ARGS}" -t ${IMAGE_TAG} .
 
 push-image:
 	@echo pushing ${IMAGE_TAG}

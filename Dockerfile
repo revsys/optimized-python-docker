@@ -31,7 +31,8 @@
 #
 ###############################################################################
 
-FROM gcr.io/google-containers/debian-base-amd64:v1.0.0 as runtime
+#FROM gcr.io/google-containers/debian-base-amd64:v2.0.0 as runtime
+FROM debian:buster-slim as runtime
 
 ENV PATH /usr/local/bin:$PATH
 
@@ -46,9 +47,10 @@ RUN set -ex \
     && apt update \
     && apt -y upgrade \
     && apt-mark unhold apt libcap2 libsemanage1 passwd  \
-    && apt-get install -y curl gnupg libsqlite3-0 zlib1g libexpat1 bash tcpdump procps less binutils libbz2-1.0 netcat-openbsd git \
+    && apt-get install --no-install-recommends -qq -y libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils \
     && find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
-    && apt-get remove binutils --purge -y -qq \
+    && apt-get remove -qq --allow-remove-essential --purge -y -qq \
+        binutils e2fsprogs e2fslibs libx11-6 libx11-data \
     && find /var/lib/apt/lists \
             /usr/share/man \
             /usr/share/doc \
@@ -68,16 +70,16 @@ ADD gnupg/pubring.gpg gnupg/trustdb.gpg /root/.gnupg/
 RUN set -ex \
     && mkdir -p /root/.gnupg \
     && chmod 700 /root/.gnupg \
-    && buildDeps='libsqlite3-dev zlib1g-dev libexpat1-dev libssl-dev xz-utils dpkg-dev binutils libbz2-dev libreadline-dev libffi-dev' \
+    && buildDeps='libsqlite3-dev zlib1g-dev libexpat1-dev libssl-dev xz-utils dpkg-dev binutils libbz2-dev libreadline-dev libffi-dev libncurses5 libncurses5-dev libncursesw5 openssl curl gnupg' \
     && apt-get -qq update; apt-get -qq -y install ${buildDeps}
 
 ARG PYTHON_VERSION
 
 RUN \
     set -ex; \
-    curl -L -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
-    && curl -L -o /python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
-    && gpg --keyserver ha.pool.sks-keyservers.net --refresh-keys 2>&1 | egrep -v 'requesting key|not changed' \
+    curl -sL -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" \
+    && curl -sL -o /python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
+    && gpg --keyserver ha.pool.sks-keyservers.net --refresh-keys 2>&1 | egrep -v 'requesting key|not changed' || sleep 6000 \
     && gpg --batch --verify /python.tar.xz.asc /python.tar.xz \
     && mkdir -p /usr/src/python \
     && tar -xJC /usr/src/python --strip-components=1 -f /python.tar.xz
@@ -92,8 +94,6 @@ FROM build-setup as builder
 ARG BUILD_ARGS
 ARG PYTHON_VERSION
 ENV LANG C.UTF-8
-
-#RUN sleep 6000 || echo "whee"
 
 ENV CFLAGS -I/usr/include/openssl
 
@@ -147,15 +147,13 @@ RUN set -ex; ldconfig
 RUN set -ex; curl -sL -o get-pip.py 'https://bootstrap.pypa.io/get-pip.py';
 RUN set -ex; python get-pip.py \
                 --disable-pip-version-check \
-                --no-cache-dir \
-                "pip==$PYTHON_PIP_VERSION"; pip --version
+                --no-cache-dir; \
+                pip --version
+                # "pip==$PYTHON_PIP_VERSION";
 
-
-RUN set -ex; pip install pipenv --upgrade
 
 RUN mkdir -p $HOME/.ipython/profile_default ;
 RUN mv ipython_config.py $HOME/.ipython/profile_default/. ;
-RUN pip install ipython ipdb
 
 RUN set -ex;  \
     find /usr/local -depth \
@@ -177,11 +175,11 @@ LABEL version ${PYTHON_VERSION}
 FROM runtime as final
 
 COPY --from=post-build /usr/local /usr/local
-COPY --from=post-build /root /root
+COPY --from=post-build /root/* /root/
 RUN /sbin/ldconfig
 
 LABEL stage FINAL
 ARG PYTHON_VERSION
 LABEL version ${PYTHON_VERSION}
 
-CMD ["ipython"]
+CMD ["python"]
