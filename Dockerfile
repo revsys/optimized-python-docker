@@ -65,8 +65,6 @@ LABEL stage RUNTIME
 ###############################################################################
 FROM runtime as build-setup
 
-ADD gnupg/pubring.gpg gnupg/trustdb.gpg /root/.gnupg/
-
 RUN set -ex \
     && mkdir -p /root/.gnupg \
     && chmod 700 /root/.gnupg \
@@ -76,13 +74,8 @@ RUN set -ex \
 ARG PYTHON_VERSION
 
 RUN \
-    set -ex; \
-    curl -sL -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" \
-    && curl -sL -o /python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
-    && gpg --keyserver ha.pool.sks-keyservers.net --refresh-keys 2>&1 | egrep -v 'requesting key|not changed' || sleep 6000 \
-    && gpg --batch --verify /python.tar.xz.asc /python.tar.xz \
-    && mkdir -p /usr/src/python \
-    && tar -xJC /usr/src/python --strip-components=1 -f /python.tar.xz
+    mkdir -p /usr/src/python \
+    && tar -xJC /usr/src/python --strip-components=1 -f <( curl -sL "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" ) 
 
 
 LABEL stage BUILD-SETUP
