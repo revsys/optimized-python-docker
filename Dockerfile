@@ -32,7 +32,7 @@
 ###############################################################################
 
 #FROM gcr.io/google-containers/debian-base-amd64:v2.0.0 as runtime
-FROM debian:buster-slim as runtime
+FROM debian:buster-slim as base
 
 ENV PATH /usr/local/bin:$PATH
 
@@ -63,23 +63,41 @@ RUN set -ex \
 LABEL stage RUNTIME
 
 ###############################################################################
-FROM runtime as build-setup
+FROM scratch as runtime
 
-RUN set -ex \
-    && mkdir -p /root/.gnupg \
-    && chmod 700 /root/.gnupg \
-    && buildDeps='libsqlite3-dev zlib1g-dev libexpat1-dev libssl-dev xz-utils dpkg-dev binutils libbz2-dev libreadline-dev libffi-dev libncurses5 libncurses5-dev libncursesw5 openssl curl gnupg' \
-    && apt-get -qq update; apt-get -qq -y install ${buildDeps}
+COPY --from=base / /
+
+###############################################################################
+FROM alpine as source-download
 
 ARG PYTHON_VERSION
 
-RUN \
-    mkdir -p /usr/src/python \
-    && tar -xJC /usr/src/python --strip-components=1 -f <( curl -sL "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" ) 
+ENV SRCDIR /python
+RUN apk add curl
+RUN mkdir -p /python /build \
+    && tar -xJC ${SRCDIR} --strip-components=1 -f <( curl -sL "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" ) 
+
+
+###############################################################################
+FROM runtime as build-setup
+
+WORKDIR /python
+
+ARG PYTHON_VERSION
+
+RUN apt-get update
+RUN apt-get -y install --no-install-recommends \ 
+           libsqlite3-dev zlib1g-dev libexpat1-dev \
+           libssl-dev xz-utils dpkg-dev binutils libbz2-dev \
+           libreadline-dev libffi-dev libncurses5 \
+           libncurses5-dev libncursesw5 openssl  \
+           gcc g++ make autoconf libtool  \
+           dpkg-dev
+
+# COPY --from=source-download /${PYTHON_VERSION} /python
 
 
 LABEL stage BUILD-SETUP
-LABEL version ${PYTHON_VERSION}
 
 ###############################################################################
 FROM build-setup as builder
@@ -90,21 +108,33 @@ ENV LANG C.UTF-8
 
 ENV CFLAGS -I/usr/include/openssl
 
-RUN set -ex \
-    && cd /usr/src/python \
+WORKDIR /build
+
+RUN --mount=type=bind,from=source-download,target=/python,source=/python \
+    --mount=type=cache,target=/tmp \
+    --mount=type=cache,target=/var/tmp \
+    --mount=type=cache,target=/var/log \
+    --mount=type=cache,target=/root \
+    set -ex \
     && gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
     && [ $(( ` echo $PYTHON_VERSION | cut -d"." -f1 ` )) -lt 3 ] && BUILD_ARGS="" \
-    ; ./configure \
+    ; ../python/configure \
         --build="$gnuArch" \
         --enable-loadable-sqlite-extensions \
         --enable-shared \
         --with-system-expat \
         --with-system-ffi \
-        --without-ensurepip ${BUILD_ARGS} \
-    && make -j $(( 1 * $( egrep '^processor[[:space:]]+:' /proc/cpuinfo | wc -l ) )) \
+        --without-ensurepip ${BUILD_ARGS} 
+
+RUN --mount=type=bind,from=source-download,target=/python,source=/python \
+    --mount=type=cache,target=/tmp \
+    --mount=type=cache,target=/var/tmp \
+    --mount=type=cache,target=/var/log \
+    --mount=type=cache,target=/root \
+    make -j $(( 1 * $( egrep '^processor[[:space:]]+:' /proc/cpuinfo | wc -l ) )) \
     && make install
 
-    RUN set -ex \
+RUN set -ex \
         find /usr/local -type f -name "*.so" -exec strip --strip-unneeded {} + \
     &   ldconfig \
     &   find /usr/local -depth \
@@ -134,19 +164,15 @@ FROM builder as post-build
 ENV PYTHON_PIP_VERSION 19.1.1
 
 
-COPY ./ipython_config.py /
+ADD https://bootstrap.pypa.io/get-pip.py .
 
 RUN set -ex; ldconfig
-RUN set -ex; curl -sL -o get-pip.py 'https://bootstrap.pypa.io/get-pip.py';
 RUN set -ex; python get-pip.py \
                 --disable-pip-version-check \
                 --no-cache-dir; \
                 pip --version
                 # "pip==$PYTHON_PIP_VERSION";
 
-
-RUN mkdir -p $HOME/.ipython/profile_default ;
-RUN mv ipython_config.py $HOME/.ipython/profile_default/. ;
 
 RUN set -ex;  \
     find /usr/local -depth \
