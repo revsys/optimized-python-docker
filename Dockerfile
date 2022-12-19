@@ -1,4 +1,4 @@
-# vim: ft=Dockerfile ts=4 sw=4 expandtab
+# vim: ft=dockerfile ts=4 sw=4 expandtab
 ###############################################################################
 #
 # Multi-stage Python 3.x build
@@ -47,7 +47,7 @@ RUN set -ex \
     && apt update \
     && apt -y upgrade \
     && apt-mark unhold apt libcap2 libsemanage1 passwd  \
-    && apt-get install --no-install-recommends -qq -y libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils \
+    && apt-get install --no-install-recommends -qq -y ca-certificates libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils \
     && find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
     && apt-get remove -qq --allow-remove-essential --purge -y -qq \
         binutils e2fsprogs e2fslibs libx11-6 libx11-data \
@@ -65,12 +65,21 @@ LABEL stage RUNTIME
 ###############################################################################
 FROM scratch as runtime
 
+ENV PATH /usr/local/bin:$PATH
+
+# http://bugs.python.org/issue19846
+# > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
+ENV LANG C.UTF-8
+
+COPY ./init-functions /lib/lsb/
+
 COPY --from=base / /
 
 ###############################################################################
 FROM alpine as source-download
 
 ARG PYTHON_VERSION
+ENV PYTHON_VERSION ${PYTHON_VERSION}
 
 ENV SRCDIR /python
 RUN apk add curl
@@ -83,8 +92,6 @@ FROM runtime as build-setup
 
 WORKDIR /python
 
-ARG PYTHON_VERSION
-
 RUN apt-get update
 RUN apt-get -y install --no-install-recommends \ 
            libsqlite3-dev zlib1g-dev libexpat1-dev \
@@ -93,9 +100,6 @@ RUN apt-get -y install --no-install-recommends \
            libncurses5-dev libncursesw5 openssl  \
            gcc g++ make autoconf libtool  \
            dpkg-dev
-
-# COPY --from=source-download /${PYTHON_VERSION} /python
-
 
 LABEL stage BUILD-SETUP
 
@@ -110,12 +114,9 @@ ENV CFLAGS -I/usr/include/openssl
 
 WORKDIR /build
 
-RUN --mount=type=bind,from=source-download,target=/python,source=/python \
-    --mount=type=cache,target=/tmp \
-    --mount=type=cache,target=/var/tmp \
-    --mount=type=cache,target=/var/log \
-    --mount=type=cache,target=/root \
-    set -ex \
+COPY --from=source-download /python /python
+
+RUN set -ex \
     && gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
     && [ $(( ` echo $PYTHON_VERSION | cut -d"." -f1 ` )) -lt 3 ] && BUILD_ARGS="" \
     ; ../python/configure \
@@ -126,12 +127,7 @@ RUN --mount=type=bind,from=source-download,target=/python,source=/python \
         --with-system-ffi \
         --without-ensurepip ${BUILD_ARGS} 
 
-RUN --mount=type=bind,from=source-download,target=/python,source=/python \
-    --mount=type=cache,target=/tmp \
-    --mount=type=cache,target=/var/tmp \
-    --mount=type=cache,target=/var/log \
-    --mount=type=cache,target=/root \
-    make -j $(( 1 * $( egrep '^processor[[:space:]]+:' /proc/cpuinfo | wc -l ) )) \
+RUN make -j $(( 1 * $( egrep '^processor[[:space:]]+:' /proc/cpuinfo | wc -l ) )) \
     && make install
 
 RUN set -ex \
@@ -161,7 +157,7 @@ LABEL version ${PYTHON_VERSION}
 FROM builder as post-build
 
 # if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-ENV PYTHON_PIP_VERSION 19.1.1
+ENV PYTHON_PIP_VERSION 22.2.2
 
 
 ADD https://bootstrap.pypa.io/get-pip.py .
@@ -191,10 +187,11 @@ LABEL stage POST-BUILD
 LABEL version ${PYTHON_VERSION}
 
 ###############################################################################
-FROM runtime as final
+FROM runtime as release
 
 COPY --from=post-build /usr/local /usr/local
 COPY --from=post-build /root/* /root/
+
 RUN /sbin/ldconfig
 
 LABEL stage FINAL
