@@ -32,7 +32,7 @@
 ###############################################################################
 
 #FROM gcr.io/google-containers/debian-base-amd64:v2.0.0 AS runtime
-FROM debian:buster-slim AS base
+FROM debian:bookworm-slim AS base
 
 ENV PATH=/usr/local/bin:$PATH
 
@@ -62,11 +62,11 @@ COPY ./init-functions /lib/lsb/
 
 RUN apt update
 RUN apt -y upgrade
-RUN apt-mark unhold apt libpcap2 libsemanage1 passwd
 RUN apt-get install --no-install-recommends -qq -y ca-certificates libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils 
 RUN find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + 
 
-RUN apt-get remove -qq --allow-remove-essential --purge -y -qq binutils e2fsprogs e2fslibs libx11-6 libx11-data \
+RUN apt-get remove -qq --allow-remove-essential --purge -y -qq binutils e2fsprogs e2fslibs libx11-6 libx11-data 
+
 RUN find /var/lib/apt/lists \
      /usr/share/man \
      /usr/share/doc \
@@ -88,9 +88,10 @@ ENV PATH=/usr/local/bin:$PATH
 # > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
 ENV LANG=C.UTF-8
 
-COPY ./init-functions /lib/lsb/
 
 COPY --from=base / /
+
+COPY ./init-functions /lib/lsb/
 
 ###############################################################################
 FROM alpine AS source-download
