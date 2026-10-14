@@ -43,22 +43,39 @@ ENV LANG=C.UTF-8
 
 COPY ./init-functions /lib/lsb/
 
-RUN set -ex \
-    && apt update \
-    && apt -y upgrade \
-    && apt-mark unhold apt libcap2 libsemanage1 passwd  \
-    && apt-get install --no-install-recommends -qq -y ca-certificates libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils \
-    && find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
-    && apt-get remove -qq --allow-remove-essential --purge -y -qq \
-        binutils e2fsprogs e2fslibs libx11-6 libx11-data \
-    && find /var/lib/apt/lists \
-            /usr/share/man \
-            /usr/share/doc \
-            /var/log \
-            -type f -exec rm -f {} + \
-    && rm -rf /root/.gnupg \
-    && mkdir -p /root/.gnupg \
-    && chmod 700 /root/.gnupg
+# RUN set -ex \
+#     && apt update \
+#     && apt -y upgrade \
+#     && apt-mark unhold apt libcap2 libsemanage1 passwd  \
+#     && apt-get install --no-install-recommends -qq -y ca-certificates libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils \
+#     && find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + \
+#     && apt-get remove -qq --allow-remove-essential --purge -y -qq \
+#         binutils e2fsprogs e2fslibs libx11-6 libx11-data \
+#     && find /var/lib/apt/lists \
+#             /usr/share/man \
+#             /usr/share/doc \
+#             /var/log \
+#             -type f -exec rm -f {} + \
+#     && rm -rf /root/.gnupg \
+#     && mkdir -p /root/.gnupg \
+#     && chmod 700 /root/.gnupg
+
+RUN apt update
+RUN apt -y upgrade
+RUN apt-mark unhold apt libpcap2 libsemanage1 passwd
+RUN apt-get install --no-install-recommends -qq -y ca-certificates libsqlite3-0 zlib1g libexpat1 bash procps less libbz2-1.0 netcat-openbsd git binutils 
+RUN find /usr -type f -name "*.so" -exec strip --strip-unneeded {} + 
+
+RUN apt-get remove -qq --allow-remove-essential --purge -y -qq binutils e2fsprogs e2fslibs libx11-6 libx11-data \
+RUN find /var/lib/apt/lists \
+     /usr/share/man \
+     /usr/share/doc \
+     /var/log  \
+     -type f -exec rm -f {} + 
+
+RUN rm -rf /root/.gnupg 
+RUN mkdir -p /root/.gnupg 
+RUN chmod 700 /root/.gnupg
 
 LABEL stage=RUNTIME
 
