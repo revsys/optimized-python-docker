@@ -1,6 +1,11 @@
 
 resources:
   -
+    name: busybox
+    type: registry-image
+    source:
+      repository: busybox
+  -
     name: ci
     type: git
     source: 
@@ -11,6 +16,8 @@ jobs:
   -
     name: the-best-job
     plan:
+      - get: busybox
       - get: ci
       - task: today
+        image: busybox
         file: .concourse/tasks/print-date.yml
