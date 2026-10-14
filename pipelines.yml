@@ -5,6 +5,7 @@ resources:
     type: git
     source: 
       uri: https://github.com/revsys/optimized-python-docker.git
+      branch: concourse
 
 jobs:
   -
@@ -12,4 +13,4 @@ jobs:
     plan:
       - get: ci
       - task: today
-        file: ./.concourse/tasks/print-date.yml
+        file: .concourse/tasks/print-date.yml
