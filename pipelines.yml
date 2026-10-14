@@ -24,6 +24,7 @@ jobs:
       - get: busybox
       - get: oci-build-task
       - get: ci
+        trigger: true
       - task: today
         image: busybox
         file: ci/.concourse/tasks/print-date.yml
