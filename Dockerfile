@@ -31,15 +31,15 @@
 #
 ###############################################################################
 
-#FROM gcr.io/google-containers/debian-base-amd64:v2.0.0 as runtime
-FROM debian:buster-slim as base
+#FROM gcr.io/google-containers/debian-base-amd64:v2.0.0 AS runtime
+FROM debian:buster-slim AS base
 
-ENV PATH /usr/local/bin:$PATH
+ENV PATH=/usr/local/bin:$PATH
 
 # http://bugs.python.org/issue19846
 # > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
 
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
 COPY ./init-functions /lib/lsb/
 
@@ -60,35 +60,42 @@ RUN set -ex \
     && mkdir -p /root/.gnupg \
     && chmod 700 /root/.gnupg
 
-LABEL stage RUNTIME
+LABEL stage=RUNTIME
 
 ###############################################################################
-FROM scratch as runtime
+FROM scratch AS runtime
 
-ENV PATH /usr/local/bin:$PATH
+ENV PATH=/usr/local/bin:$PATH
 
 # http://bugs.python.org/issue19846
 # > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
 COPY ./init-functions /lib/lsb/
 
 COPY --from=base / /
 
 ###############################################################################
-FROM alpine as source-download
+FROM alpine AS source-download
 
 ARG PYTHON_VERSION
-ENV PYTHON_VERSION ${PYTHON_VERSION}
+ENV PYTHON_VERSION=${PYTHON_VERSION}
 
-ENV SRCDIR /python
+ENV SRCDIR=/python
 RUN apk add curl
+
 RUN mkdir -p /python /build \
     && tar -xJC ${SRCDIR} --strip-components=1 -f <( curl -sL "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" ) 
 
+RUN \
+    set -ex; \
+    curl -sL -o /python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz" \
+    && curl -sL -o /python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
+    && mkdir -p /usr/src/python \
+    && tar -xJC /usr/src/python --strip-components=1 -f /python.tar.xz
 
 ###############################################################################
-FROM runtime as build-setup
+FROM runtime AS build-setup
 
 WORKDIR /python
 
@@ -101,16 +108,16 @@ RUN apt-get -y install --no-install-recommends \
            gcc g++ make autoconf libtool  \
            dpkg-dev
 
-LABEL stage BUILD-SETUP
+LABEL stage=BUILD-SETUP
 
 ###############################################################################
-FROM build-setup as builder
+FROM build-setup AS builder
 
 ARG BUILD_ARGS
 ARG PYTHON_VERSION
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
-ENV CFLAGS -I/usr/include/openssl
+ENV CFLAGS=-I/usr/include/openssl
 
 WORKDIR /build
 
@@ -150,14 +157,14 @@ RUN set -ex \
 # make some useful symlinks that are expected to exist
 RUN ["/bin/bash", "-c", "if [[ $( echo ${PYTHON_VERSION} | cut -d'.' -f1 ) == '3' ]]; then cd /usr/local/bin && ln -sf pydoc3 pydoc && ln -sf python3 python && ln -sf python3-config python-config;  fi"]
 
-LABEL stage BUILDER
-LABEL version ${PYTHON_VERSION}
+LABEL stage=BUILDER
+LABEL version=${PYTHON_VERSION}
 
 ###############################################################################
-FROM builder as post-build
+FROM builder AS post-build
 
 # if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-ENV PYTHON_PIP_VERSION 22.2.2
+ENV PYTHON_PIP_VERSION=22.2.2
 
 
 ADD https://bootstrap.pypa.io/get-pip.py .
@@ -183,19 +190,19 @@ RUN set -ex; \
 RUN rm -rf /root/.cache
 
 ARG PYTHON_VERSION
-LABEL stage POST-BUILD
-LABEL version ${PYTHON_VERSION}
+LABEL stage=POST-BUILD
+LABEL version=${PYTHON_VERSION}
 
 ###############################################################################
-FROM runtime as release
+FROM runtime AS release
 
 COPY --from=post-build /usr/local /usr/local
 COPY --from=post-build /root/* /root/
 
 RUN /sbin/ldconfig
 
-LABEL stage FINAL
+LABEL stage=FINAL
 ARG PYTHON_VERSION
-LABEL version ${PYTHON_VERSION}
+LABEL version=${PYTHON_VERSION}
 
 CMD ["python"]
