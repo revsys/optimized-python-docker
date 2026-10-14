@@ -13,6 +13,10 @@ caches:
 params:
   CONTEXT: ci
   BUILD_ARG_PYTHON_VERSION: 3.6.2
+  BUILD_ARG_LTO: ""
+  BUILD_ARG_OPTIMAL: ""
+
+
 
 run:
   path: build
