@@ -2,5 +2,5 @@ platform: linux
 
 run:
   path: date
-  args: ["%Y-%m-%d"]
+  args: ["+%Y-%m-%d"]
 

@@ -20,4 +20,4 @@ jobs:
       - get: ci
       - task: today
         image: busybox
-        file: .concourse/tasks/print-date.yml
+        file: ci/.concourse/tasks/print-date.yml
