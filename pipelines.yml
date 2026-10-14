@@ -6,6 +6,11 @@ resources:
     source:
       repository: busybox
   -
+    name: oci-build-task
+    type: registry-image
+    source:
+      repository: concourse/oci-build-task
+  -
     name: ci
     type: git
     source: 
@@ -21,3 +26,8 @@ jobs:
       - task: today
         image: busybox
         file: ci/.concourse/tasks/print-date.yml
+      - task: build
+        privileged: true
+        image: oci-build-task
+        file: ci/.concourse/tasks/build.yml
+    
