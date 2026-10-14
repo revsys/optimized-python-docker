@@ -1,0 +1,15 @@
+
+resources:
+  -
+    name: ci
+    type: git
+    source: 
+      uri: https://github.com/revsys/optimized-python-docker.git
+
+jobs:
+  -
+    name: the-best-job
+    plan:
+      - get: ci
+      - task: today
+        file: ./.concourse/tasks/print-date.yml
