@@ -1,4 +1,3 @@
-
 platform: linux
 
 inputs:
@@ -12,7 +11,7 @@ caches:
 
 params:
   CONTEXT: ci
-  BUILD_ARG_PYTHON_VERSION: 3.14.8
+  BUILD_ARG_PYTHON_VERSION: 3.14.7
   BUILD_ARG_LTO: ""
   BUILD_ARG_OPTIMAL: ""
 
