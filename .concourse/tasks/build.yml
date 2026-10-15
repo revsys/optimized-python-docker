@@ -14,8 +14,7 @@ caches:
 params:
   CONTEXT: optimized-python-repo
   BUILD_ARG_PYTHON_VERSION: 3.14.8
-  BUILD_ARG_BUILD_ARGS: ""
-  BUILD_ARG_OPTIMAL: 1
+  BUILD_ARG_BUILD_ARGS: --with-lto --with-optimizations
   UNPACK_ROOTFS: true
   TARGET: release
 
