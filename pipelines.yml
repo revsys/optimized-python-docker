@@ -20,7 +20,6 @@ jobs:
   -
     name: python-build
     old_name: the-best-job
-    max-in-flight: 1
     plan:
       -
         get: busybox
@@ -38,6 +37,8 @@ jobs:
         privileged: true
         image: oci-build-task
         file: optimized-python-repo/.concourse/tasks/build.yml
+        output_mapping:
+          image: python-image
       -
         task: use-image
         image: python-image
