@@ -9,7 +9,7 @@ outputs:
   - name: python-image
 
 caches:
-  - path: python-build-cache
+  - path: cache
 
 params:
   CONTEXT: optimized-python-repo
