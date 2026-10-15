@@ -11,7 +11,7 @@ resources:
     source:
       repository: concourse/oci-build-task
   -
-    name: ci
+    name: optimized-python-repo
     type: git
     source: 
       uri: https://github.com/revsys/optimized-python-docker.git
@@ -23,13 +23,17 @@ jobs:
     plan:
       - get: busybox
       - get: oci-build-task
-      - get: ci
+      - get: optimized-python-repo
         trigger: true
       - task: today
         image: busybox
-        file: ci/.concourse/tasks/print-date.yml
+        file: optimized-python-repo/.concourse/tasks/print-date.yml
       - task: build
         privileged: true
         image: oci-build-task
-        file: ci/.concourse/tasks/build.yml
+        file: optimized-python-repo/.concourse/tasks/build.yml
+      - task: use-image
+        image: python-image
+        file: optimized-python-repo/.concourse/tasks/use.yml
+
     

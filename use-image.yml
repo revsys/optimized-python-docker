@@ -1,0 +1,6 @@
+
+platform: linux
+
+run:
+  path: python
+  args: ["--version"]
