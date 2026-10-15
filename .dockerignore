@@ -1,0 +1,3 @@
+.concourse/
+.claude/
+justfile
