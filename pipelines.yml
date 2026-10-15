@@ -1,4 +1,3 @@
-
 resources:
   -
     name: busybox
@@ -13,27 +12,33 @@ resources:
   -
     name: optimized-python-repo
     type: git
-    source: 
+    source:
       uri: https://github.com/revsys/optimized-python-docker.git
       branch: concourse
 
 jobs:
   -
-    name: the-best-job
+    name: python-build
+    old_name: the-best-job
+    max-in-flight: 1
     plan:
-      - get: busybox
-      - get: oci-build-task
-      - get: optimized-python-repo
+      -
+        get: busybox
+      -
+        get: oci-build-task
+      -
+        get: optimized-python-repo
         trigger: true
-      - task: today
+      -
+        task: today
         image: busybox
         file: optimized-python-repo/.concourse/tasks/print-date.yml
-      - task: build
+      -
+        task: build
         privileged: true
         image: oci-build-task
         file: optimized-python-repo/.concourse/tasks/build.yml
-      - task: use-image
+      -
+        task: use-image
         image: python-image
         file: optimized-python-repo/.concourse/tasks/use.yml
-
-    

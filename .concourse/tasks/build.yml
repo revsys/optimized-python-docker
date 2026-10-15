@@ -6,7 +6,7 @@ inputs:
   - name: optimized-python-repo
 
 outputs:
-  - name: python-image
+  - name: image
 
 caches:
   - path: cache
