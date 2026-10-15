@@ -16,7 +16,7 @@ params:
   BUILD_ARG_PYTHON_VERSION: 3.14.7
   BUILD_ARG_LTO: ""
   BUILD_ARG_OPTIMAL: ""
-  UNPACK_ROOTFS: "true"
+  UNPACK_ROOTFS: true
 
 
 run:
